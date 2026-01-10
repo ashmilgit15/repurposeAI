@@ -1,29 +1,29 @@
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require("groq-sdk");
 
-async function testGemini() {
-    const apiKey = process.env.GEMINI_API_KEY;
+async function testGroq() {
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        console.error("GEMINI_API_KEY is not set in .env.local");
+        console.error("GROQ_API_KEY is not set. Run with: GROQ_API_KEY=your_key node test-gemini.js");
         return;
     }
 
-    console.log("Using API Key:", apiKey.substring(0, 5) + "...");
+    console.log("Testing Groq API with llama-3.3-70b-versatile...\n");
 
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        // User mentioned "2.0-flash" (referred as 2.5 flash)
-        const name = "gemini-.5-flash";
-        console.log(`\nTesting model: ${name}`);
+        const groq = new Groq.default({ apiKey });
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: "Say 'Hello, Groq is working!' in one sentence." }],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.7,
+            max_tokens: 100,
+        });
 
-        const model = genAI.getGenerativeModel({ model: name });
-        const result = await model.generateContent("Say 'test' in one word.");
-        const response = await result.response;
-        console.log(`Success with ${name}:`, response.text());
+        console.log("SUCCESS! Groq response:", completion.choices[0]?.message?.content);
     } catch (error) {
-        console.error("Error calling Gemini API:");
-        console.error(error.message || error);
+        console.error("Groq Error:", error.message || error);
     }
 }
 
-testGemini();
+testGroq();

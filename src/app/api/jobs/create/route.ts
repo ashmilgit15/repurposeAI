@@ -1,8 +1,80 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { generatePrompt } from "@/lib/prompts";
 import { FREE_TIER_LIMIT, FREE_TIER_FORMATS } from "@/lib/types";
+
+// AI Provider types
+type AIProvider = "gemini" | "groq";
+
+interface GenerationResult {
+  content: string;
+  provider: AIProvider;
+}
+
+// Generate content using Gemini (Primary)
+async function generateWithGemini(prompt: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("Gemini API key not configured");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
+}
+
+// Generate content using Groq (Fallback)
+async function generateWithGroq(prompt: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("Groq API key not configured");
+  }
+
+  const groq = new Groq({ apiKey });
+  const completion = await groq.chat.completions.create({
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    model: "llama-3.3-70b-versatile",
+    temperature: 0.7,
+    max_tokens: 4096,
+  });
+
+  return completion.choices[0]?.message?.content || "";
+}
+
+// Generate content with fallback system
+async function generateContentWithFallback(prompt: string): Promise<GenerationResult> {
+  // Try Gemini first (Primary)
+  try {
+    console.log("Attempting generation with Gemini (primary)...");
+    const content = await generateWithGemini(prompt);
+    console.log("Gemini generation successful");
+    return { content, provider: "gemini" };
+  } catch (geminiError: unknown) {
+    const geminiMessage = geminiError instanceof Error ? geminiError.message : String(geminiError);
+    console.log(`Gemini failed: ${geminiMessage.substring(0, 100)}...`);
+    console.log("Falling back to Groq...");
+  }
+
+  // Fallback to Groq
+  try {
+    const content = await generateWithGroq(prompt);
+    console.log("Groq generation successful (fallback)");
+    return { content, provider: "groq" };
+  } catch (groqError: unknown) {
+    const groqMessage = groqError instanceof Error ? groqError.message : String(groqError);
+    console.error(`Groq also failed: ${groqMessage}`);
+    throw new Error(`All AI providers failed. Last error: ${groqMessage}`);
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -89,30 +161,38 @@ export async function POST(request: Request) {
       }
     }
 
-    // Initialize Gemini
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    // Check if at least one AI provider is configured
+    if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) {
       return NextResponse.json(
-        { error: "AI service not configured" },
+        { error: "No AI service configured" },
         { status: 500 }
       );
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    // Generate content for each format
+    // Generate content for each format with fallback
     const outputs: Record<string, string> = {};
+    let usedProvider: AIProvider = "gemini";
 
     for (const format of selected_formats) {
       try {
         const prompt = generatePrompt(format, input_text, brand_voice);
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        outputs[format] = response.text();
-      } catch (error) {
-        console.error(`Error generating ${format}:`, error);
-        outputs[format] = `Error generating content for ${format}. Please try again.`;
+        const result = await generateContentWithFallback(prompt);
+        outputs[format] = result.content;
+        usedProvider = result.provider;
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`Error generating ${format}:`, errorMessage);
+
+        // Provide user-friendly error messages
+        if (errorMessage.includes("API key") || errorMessage.includes("configured")) {
+          outputs[format] = `AI service configuration error. Please contact support.`;
+        } else if (errorMessage.includes("rate") || errorMessage.includes("limit")) {
+          outputs[format] = `Rate limit reached. Please try again in a moment.`;
+        } else if (errorMessage.includes("safety") || errorMessage.includes("blocked")) {
+          outputs[format] = `Content was flagged by safety filters. Try modifying your input.`;
+        } else {
+          outputs[format] = `Error generating content for ${format}. Please try again later.`;
+        }
       }
     }
 
@@ -147,6 +227,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       job_id: job.id,
       outputs,
+      provider: usedProvider, // Let client know which provider was used
     });
   } catch (error) {
     console.error("Error creating job:", error);

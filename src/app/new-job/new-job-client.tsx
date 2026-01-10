@@ -32,6 +32,8 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { PLATFORM_INFO, FREE_TIER_FORMATS, type Platform } from "@/lib/types";
 import { toast } from "sonner";
@@ -66,6 +68,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
   const [progress, setProgress] = useState(0);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(!canCreateJob);
   const [scrapedTitle, setScrapedTitle] = useState<string | null>(null);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
 
   const charCount = inputText.length;
   const isValidInput = charCount >= 100;
@@ -115,7 +118,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
         throw new Error(data.error || "Failed to scrape URL");
       }
 
-      setInputText(data.content);
+      setInputText(data.content || "");
       setScrapedTitle(data.title);
       toast.success(`Content extracted from: ${data.title || urlInput}`);
     } catch (error) {
@@ -126,10 +129,29 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
   };
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
+    console.log("Generate Content button clicked");
+
+    // Validation checks with user feedback
+    if (!inputText) {
+      toast.error("Please enter some content to repurpose");
+      return;
+    }
+
+    if (inputText.length < 100) {
+      toast.error(`Content is too short (${inputText.length}/100 chars). Please add more detail.`);
+      return;
+    }
+
+    if (selectedFormats.length === 0) {
+      toast.error("Please select at least one platform format");
+      return;
+    }
+
+    if (loading || scraping) return;
 
     setLoading(true);
     setProgress(0);
+    const startTime = Date.now();
 
     // Simulate progress
     const progressInterval = setInterval(() => {
@@ -137,6 +159,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
     }, 500);
 
     try {
+      console.log("Sending request to /api/jobs/create...");
       const response = await fetch("/api/jobs/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -149,18 +172,35 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
 
       clearInterval(progressInterval);
 
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create job");
+        let errorMessage = "Failed to create job";
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          console.error("Non-JSON error response from server:", response.status, response.statusText);
+          const textBody = await response.text();
+          console.error("Response body:", textBody);
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log("Job created successfully:", data);
+
       setProgress(100);
+
+      // Ensure loading state is visible for at least 800ms to prevent flashing
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, 800 - elapsedTime);
 
       setTimeout(() => {
         router.push(`/job/${data.job_id}`);
-      }, 500);
+      }, 500 + remainingTime);
     } catch (error) {
+      console.error("Submit error:", error);
       clearInterval(progressInterval);
       toast.error(error instanceof Error ? error.message : "Failed to create job");
       setLoading(false);
@@ -253,20 +293,45 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                       {charCount.toLocaleString()} Characters {charCount < 100 && "(min 100)"}
                     </span>
                   </div>
-                  <Textarea
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    className="min-h-[300px] bg-white/[0.03] border-white/10 rounded-2xl p-6 text-base leading-relaxed focus:border-indigo-500/50 transition-all resize-none scrollbar-thin scrollbar-thumb-white/10"
-                    placeholder="Paste your text content here, or extract from a URL above..."
-                    disabled={loading}
-                  />
-                  {scrapedTitle && (
-                    <div className="absolute bottom-4 right-4 animate-in fade-in slide-in-from-right-4">
-                      <Badge className="bg-green-500/10 text-green-400 border-green-500/20 font-medium px-3 py-1.5 rounded-xl backdrop-blur-sm">
-                        ✓ {scrapedTitle.substring(0, 30)}...
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="relative">
+                    <Textarea
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      className={`bg-white/[0.03] border-white/10 rounded-2xl p-6 text-base leading-relaxed focus:border-indigo-500/50 transition-all resize-none scrollbar-thin scrollbar-thumb-white/10 ${
+                        isContentExpanded ? "min-h-[300px]" : "min-h-[120px] max-h-[120px] overflow-hidden"
+                      }`}
+                      placeholder="Paste your text content here, or extract from a URL above..."
+                      disabled={loading}
+                    />
+                    {inputText.length > 200 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsContentExpanded(!isContentExpanded)}
+                        className="absolute bottom-2 left-2 h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold backdrop-blur-sm"
+                      >
+                        {isContentExpanded ? (
+                          <>
+                            <ChevronUp className="w-3 h-3 mr-1" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3 h-3 mr-1" />
+                            Show More
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {scrapedTitle && (
+                      <div className="absolute bottom-2 right-2 animate-in fade-in slide-in-from-right-4">
+                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 font-medium px-3 py-1.5 rounded-xl backdrop-blur-sm">
+                          ✓ {scrapedTitle.substring(0, 30)}...
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -384,19 +449,20 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                 </Button>
               </Link>
               <Button
+                type="button"
                 className="flex-1 sm:flex-none h-14 px-12 rounded-2xl font-black text-lg bg-indigo-600 hover:bg-indigo-500 text-white border-0 shadow-xl shadow-indigo-600/30 group disabled:opacity-50"
                 onClick={handleSubmit}
-                disabled={!canSubmit}
+                disabled={loading || scraping}
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                    Baking...
+                    Generating...
                   </>
                 ) : (
                   <>
                     <Zap className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
-                    Ignite AI
+                    Generate Content
                   </>
                 )}
               </Button>

@@ -189,6 +189,7 @@
   background-size: 200% 100%;
   animation: beam 4s linear infinite;
   opacity: 0.5;
+  pointer-events: none;
 }
 
 @keyframes beam {
