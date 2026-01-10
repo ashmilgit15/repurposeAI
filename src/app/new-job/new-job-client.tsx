@@ -35,7 +35,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { PLATFORM_INFO, FREE_TIER_FORMATS, type Platform } from "@/lib/types";
+import { PLATFORM_INFO, type Platform } from "@/lib/types";
 import { toast } from "sonner";
 
 const ALL_PLATFORMS: Platform[] = [
@@ -76,11 +76,6 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
   const canSubmit = isValidInput && hasSelectedFormats && !loading && !scraping;
 
   const handleFormatToggle = (format: Platform) => {
-    if (!isProUser && !FREE_TIER_FORMATS.includes(format)) {
-      toast.error("This format is only available for Pro users");
-      return;
-    }
-
     setSelectedFormats((prev) =>
       prev.includes(format)
         ? prev.filter((f) => f !== format)
@@ -350,17 +345,15 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {ALL_PLATFORMS.map((platform) => {
                   const info = PLATFORM_INFO[platform];
-                  const isLocked = !isProUser && !FREE_TIER_FORMATS.includes(platform);
                   const isSelected = selectedFormats.includes(platform);
+                  const isBeta = info.beta;
 
                   return (
                     <label
                       key={platform}
                       className={`group relative flex items-start gap-4 p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all duration-300 ${isSelected
                         ? "border-indigo-500/50 bg-indigo-500/10"
-                        : isLocked
-                          ? "border-white/5 bg-white/[0.02] opacity-50 grayscale"
-                          : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]"
+                        : "border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.05]"
                         }`}
                     >
                       <Checkbox
@@ -375,8 +368,8 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                             <span className="text-2xl">{info.icon}</span>
                             <span className="font-bold text-sm tracking-wide">{info.label}</span>
                           </div>
-                          {isLocked && (
-                            <Badge className="bg-indigo-600 text-[9px] h-4 px-1 uppercase font-black tracking-widest text-white">Pro</Badge>
+                          {isBeta && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] h-4 px-1.5 uppercase font-black tracking-widest">Beta</Badge>
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground/70 leading-normal line-clamp-2">

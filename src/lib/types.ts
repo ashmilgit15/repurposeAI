@@ -31,18 +31,19 @@ export type Platform =
   | 'blog_summary'
   | 'reddit'
 
-export const PLATFORM_INFO: Record<Platform, { label: string; icon: string; description: string }> = {
+export const PLATFORM_INFO: Record<Platform, { label: string; icon: string; description: string; beta?: boolean }> = {
   twitter: { label: 'Twitter/X Thread', icon: '🐦', description: 'Thread format, 280 char limit per tweet' },
   linkedin: { label: 'LinkedIn Post', icon: '💼', description: 'Professional networking post' },
   instagram: { label: 'Instagram Caption', icon: '📸', description: 'Engaging caption with hashtags' },
   email: { label: 'Email Newsletter', icon: '📧', description: 'Full newsletter with subject line' },
-  youtube: { label: 'YouTube Video Script', icon: '🎬', description: 'Script with hooks and timestamps' },
-  tiktok: { label: 'TikTok/Reels Script', icon: '🎵', description: 'Short-form video script' },
-  facebook: { label: 'Facebook Post', icon: '👥', description: 'Casual social media post' },
-  pinterest: { label: 'Pinterest Description', icon: '📌', description: 'SEO-optimized pin description' },
+  youtube: { label: 'YouTube Video Script', icon: '🎬', description: 'Script with hooks and timestamps', beta: true },
+  tiktok: { label: 'TikTok/Reels Script', icon: '🎵', description: 'Short-form video script', beta: true },
+  facebook: { label: 'Facebook Post', icon: '👥', description: 'Casual social media post', beta: true },
+  pinterest: { label: 'Pinterest Description', icon: '📌', description: 'SEO-optimized pin description', beta: true },
   blog_summary: { label: 'Blog Summary (TL;DR)', icon: '📝', description: 'Concise content summary' },
-  reddit: { label: 'Reddit Post', icon: '🔴', description: 'Authentic community post' },
+  reddit: { label: 'Reddit Post', icon: '🔴', description: 'Authentic community post', beta: true },
 }
 
 export const FREE_TIER_LIMIT = 3
-export const FREE_TIER_FORMATS = ['twitter', 'linkedin', 'instagram', 'email', 'blog_summary']
+// All formats now available to everyone
+export const FREE_TIER_FORMATS = ['twitter', 'linkedin', 'instagram', 'email', 'blog_summary', 'youtube', 'tiktok', 'facebook', 'pinterest', 'reddit']
