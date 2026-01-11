@@ -111,12 +111,11 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Hardware acceleration for animations */
-  .glass-card,
-  .bento-item,
-  button,
-  a {
-    will-change: transform;
+  /* Hardware acceleration for interactions only when needed */
+  button:active,
+  a:active,
+  .glass-card:hover,
+  .bento-item:hover {
     transform: translateZ(0);
   }
 }
@@ -154,7 +153,7 @@
   box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.5);
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.15s ease-out;
   /* Performance optimizations */
   contain: layout style paint;
   content-visibility: auto;
@@ -164,6 +163,17 @@
 .bento-item:hover {
   background: rgba(13, 14, 20, 0.6);
   border-color: rgba(255, 255, 255, 0.15);
+  transition: all 0.1s ease-out;
+}
+
+/* Instant button feedback */
+button {
+  transition: all 0.1s ease-out;
+}
+
+button:active {
+  transform: scale(0.98);
+  transition: all 0.05s ease-out;
 }
 
 .bg-dot-pattern {

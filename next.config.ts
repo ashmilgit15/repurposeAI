@@ -26,8 +26,22 @@ const nextConfig: NextConfig = {
 
   // Experimental features for better performance
   experimental: {
-    optimizePackageImports: ['lucide-react', '@/components/ui'],
+    optimizePackageImports: ['lucide-react', '@/components/ui', 'sonner'],
+    // Optimize CSS imports
+    optimizeCss: true,
+    // Faster server actions
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
+
+  // Development optimizations
+  ...(process.env.NODE_ENV === 'development' && {
+    // Faster dev server
+    devIndicators: {
+      appIsrStatus: false,
+    },
+  }),
 };
 
 export default nextConfig;

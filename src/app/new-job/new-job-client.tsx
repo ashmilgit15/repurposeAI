@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useTransition } from "react";
+import { useState, useCallback, useMemo, startTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -78,12 +78,22 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
     [isValidInput, hasSelectedFormats, loading, scraping]
   );
 
+  // Optimized input handler with startTransition for non-blocking updates
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    startTransition(() => {
+      setInputText(value);
+    });
+  }, []);
+
   const handleFormatToggle = useCallback((format: Platform) => {
-    setSelectedFormats((prev) =>
-      prev.includes(format)
-        ? prev.filter((f) => f !== format)
-        : [...prev, format]
-    );
+    startTransition(() => {
+      setSelectedFormats((prev) =>
+        prev.includes(format)
+          ? prev.filter((f) => f !== format)
+          : [...prev, format]
+      );
+    });
   }, []);
 
   const handleScrapeUrl = useCallback(async () => {
@@ -298,7 +308,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                   <div className="relative">
                     <Textarea
                       value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
+                      onChange={handleInputChange}
                       className={`bg-white/[0.03] border-white/10 rounded-2xl p-6 text-base leading-relaxed focus:border-indigo-500/50 transition-all resize-none scrollbar-thin scrollbar-thumb-white/10 will-change-[height] ${
                         isContentExpanded ? "min-h-[300px]" : "min-h-[120px] max-h-[120px] overflow-hidden"
                       }`}
