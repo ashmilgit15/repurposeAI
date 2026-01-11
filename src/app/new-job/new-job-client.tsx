@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -70,20 +70,23 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
   const [scrapedTitle, setScrapedTitle] = useState<string | null>(null);
   const [isContentExpanded, setIsContentExpanded] = useState(false);
 
-  const charCount = inputText.length;
-  const isValidInput = charCount >= 100;
-  const hasSelectedFormats = selectedFormats.length > 0;
-  const canSubmit = isValidInput && hasSelectedFormats && !loading && !scraping;
+  const charCount = useMemo(() => inputText.length, [inputText]);
+  const isValidInput = useMemo(() => charCount >= 100, [charCount]);
+  const hasSelectedFormats = useMemo(() => selectedFormats.length > 0, [selectedFormats]);
+  const canSubmit = useMemo(
+    () => isValidInput && hasSelectedFormats && !loading && !scraping,
+    [isValidInput, hasSelectedFormats, loading, scraping]
+  );
 
-  const handleFormatToggle = (format: Platform) => {
+  const handleFormatToggle = useCallback((format: Platform) => {
     setSelectedFormats((prev) =>
       prev.includes(format)
         ? prev.filter((f) => f !== format)
         : [...prev, format]
     );
-  };
+  }, []);
 
-  const handleScrapeUrl = async () => {
+  const handleScrapeUrl = useCallback(async () => {
     if (!urlInput.trim()) {
       toast.error("Please enter a URL");
       return;
@@ -121,9 +124,9 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
     } finally {
       setScraping(false);
     }
-  };
+  }, [urlInput]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     console.log("Generate Content button clicked");
 
     // Validation checks with user feedback
@@ -201,7 +204,11 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
       setLoading(false);
       setProgress(0);
     }
-  };
+  }, [inputText, selectedFormats, brandVoice, loading, scraping, router]);
+
+  const toggleContentExpanded = useCallback(() => {
+    setIsContentExpanded((prev) => !prev);
+  }, []);
 
   return (
     <div className="min-h-screen relative">
@@ -292,7 +299,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                     <Textarea
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      className={`bg-white/[0.03] border-white/10 rounded-2xl p-6 text-base leading-relaxed focus:border-indigo-500/50 transition-all resize-none scrollbar-thin scrollbar-thumb-white/10 ${
+                      className={`bg-white/[0.03] border-white/10 rounded-2xl p-6 text-base leading-relaxed focus:border-indigo-500/50 transition-all resize-none scrollbar-thin scrollbar-thumb-white/10 will-change-[height] ${
                         isContentExpanded ? "min-h-[300px]" : "min-h-[120px] max-h-[120px] overflow-hidden"
                       }`}
                       placeholder="Paste your text content here, or extract from a URL above..."
@@ -303,7 +310,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setIsContentExpanded(!isContentExpanded)}
+                        onClick={toggleContentExpanded}
                         className="absolute bottom-2 left-2 h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold backdrop-blur-sm"
                       >
                         {isContentExpanded ? (

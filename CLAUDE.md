@@ -74,8 +74,8 @@ NEXT_PUBLIC_APP_URL
 
 ## Platform Formats
 
-Defined in `lib/types.ts`:
-- Free: twitter, linkedin, instagram, email, blog_summary
-- Pro only: youtube, tiktok, facebook, pinterest, reddit
+Defined in `lib/types.ts`. All 10 formats available to all users:
+- twitter, linkedin, instagram, email, blog_summary, youtube, tiktok, facebook, pinterest, reddit
+- Some formats marked as `beta: true` in PLATFORM_INFO
 
 Prompts for each format in `lib/prompts.ts`.

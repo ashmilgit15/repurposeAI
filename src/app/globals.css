@@ -105,6 +105,19 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Performance optimizations */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Hardware acceleration for animations */
+  .glass-card,
+  .bento-item,
+  button,
+  a {
+    will-change: transform;
+    transform: translateZ(0);
   }
 }
 
@@ -142,6 +155,9 @@
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  /* Performance optimizations */
+  contain: layout style paint;
+  content-visibility: auto;
 }
 
 .glass-card:hover,

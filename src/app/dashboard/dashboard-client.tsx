@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -57,18 +58,22 @@ function getRelativeTime(dateString: string): string {
 export function DashboardClient({ user, recentJobs }: DashboardClientProps) {
   const router = useRouter();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
-  };
+  }, [router]);
 
-  const usagePercentage = user.subscription_tier === "pro"
-    ? 0
-    : (user.jobs_this_month / FREE_TIER_LIMIT) * 100;
+  const usagePercentage = useMemo(
+    () => (user.subscription_tier === "pro" ? 0 : (user.jobs_this_month / FREE_TIER_LIMIT) * 100),
+    [user.subscription_tier, user.jobs_this_month]
+  );
 
-  const canCreateJob = user.subscription_tier === "pro" || user.jobs_this_month < FREE_TIER_LIMIT;
+  const canCreateJob = useMemo(
+    () => user.subscription_tier === "pro" || user.jobs_this_month < FREE_TIER_LIMIT,
+    [user.subscription_tier, user.jobs_this_month]
+  );
 
   return (
     <div className="min-h-screen relative">

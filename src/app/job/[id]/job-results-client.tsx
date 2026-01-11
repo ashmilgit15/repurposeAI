@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,7 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
 
-  const handleCopy = async (text: string, format: string) => {
+  const handleCopy = useCallback(async (text: string, format: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedFormat(format);
@@ -47,9 +47,9 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
     } catch {
       toast.error("Failed to copy to clipboard");
     }
-  };
+  }, []);
 
-  const handleDownloadAll = async () => {
+  const handleDownloadAll = useCallback(async () => {
     setDownloading(true);
     try {
       const zip = new JSZip();
@@ -76,7 +76,7 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
     } finally {
       setDownloading(false);
     }
-  };
+  }, [job.outputs, job.id]);
 
   return (
     <div className="min-h-screen relative">
