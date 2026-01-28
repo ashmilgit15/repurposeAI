@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  reactCompiler: true,
+
 
   // Performance optimizations
   compiler: {
@@ -11,8 +11,7 @@ const nextConfig: NextConfig = {
     } : false,
   },
 
-  // Enable SWC minification for faster builds
-  swcMinify: true,
+
 
   // Optimize images
   images: {
@@ -26,6 +25,7 @@ const nextConfig: NextConfig = {
 
   // Experimental features for better performance
   experimental: {
+
     optimizePackageImports: ['lucide-react', '@/components/ui', 'sonner'],
     // Optimize CSS imports
     optimizeCss: true,
@@ -36,12 +36,12 @@ const nextConfig: NextConfig = {
   },
 
   // Development optimizations
-  ...(process.env.NODE_ENV === 'development' && {
-    // Faster dev server
-    devIndicators: {
-      appIsrStatus: false,
-    },
-  }),
+  // ...(process.env.NODE_ENV === 'development' && {
+  //   // Faster dev server
+  //   devIndicators: {
+  //     appIsrStatus: false,
+  //   },
+  // }),
 };
 
 export default nextConfig;
