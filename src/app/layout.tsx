@@ -13,7 +13,11 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
+
+const googleAnalyticsId =
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-G11MTGFFNP";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -29,7 +33,7 @@ export const metadata: Metadata = {
   publisher: siteConfig.name,
   category: "marketing",
   manifest: "/manifest.webmanifest",
-  referrer: "origin-when-cross-origin",
+  referrer: "strict-origin-when-cross-origin",
   formatDetection: {
     email: false,
     address: false,
@@ -86,7 +90,7 @@ export default function RootLayout({
       <head>
         <Script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=G-G11MTGFFNP"
+          src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -95,12 +99,16 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            gtag('config', 'G-G11MTGFFNP');
+            gtag('config', '${googleAnalyticsId}', {
+              cookie_domain: window.location.hostname === 'localhost'
+                ? 'none'
+                : window.location.hostname
+            });
           `}
         </Script>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-indigo-500/30`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased selection:bg-indigo-500/30`}
       >
         <div className="mesh-gradient" />
         <div className="mesh-ball w-[500px] h-[500px] bg-indigo-600 top-[-100px] left-[-100px] animate-glow" />

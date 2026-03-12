@@ -64,7 +64,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.replace("/dashboard");
+      window.location.assign("/dashboard");
     } catch (error) {
       setError(formatSupabaseAuthError(error, "Couldn't create your account right now."));
     } finally {

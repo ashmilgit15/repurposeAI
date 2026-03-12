@@ -44,7 +44,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace("/dashboard");
+      window.location.assign("/dashboard");
     } catch (error) {
       setError(formatSupabaseAuthError(error, "Couldn't sign you in right now."));
     } finally {
