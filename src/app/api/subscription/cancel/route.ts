@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
+import { enforceTrustedOrigin } from "@/lib/security/request";
+import { enforceUserRateLimit } from "@/lib/security/rate-limit";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const originError = enforceTrustedOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const supabase = await createClient();
     const stripe = getStripe();
 
@@ -15,6 +22,16 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimitError = await enforceUserRateLimit(supabase, {
+      bucket: "subscription:cancel",
+      limit: 5,
+      windowSeconds: 300,
+      message: "Too many subscription cancellation attempts. Please wait a few minutes and try again.",
+    });
+    if (rateLimitError) {
+      return rateLimitError;
     }
 
     // Get user data

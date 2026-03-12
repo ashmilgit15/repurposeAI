@@ -2,10 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardClient } from "./dashboard-client";
 import type { User, Job } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-async function getUserData(userId: string): Promise<User | null> {
-  const supabase = await createClient();
-
+async function getUserData(supabase: SupabaseClient, userId: string): Promise<User | null> {
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -38,9 +37,7 @@ async function getUserData(userId: string): Promise<User | null> {
   return data;
 }
 
-async function getRecentJobs(userId: string): Promise<Job[]> {
-  const supabase = await createClient();
-
+async function getRecentJobs(supabase: SupabaseClient, userId: string): Promise<Job[]> {
   const { data, error } = await supabase
     .from("jobs")
     .select("*")
@@ -61,8 +58,10 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const userData = await getUserData(authUser.id);
-  const recentJobs = await getRecentJobs(authUser.id);
+  const [userData, recentJobs] = await Promise.all([
+    getUserData(supabase, authUser.id),
+    getRecentJobs(supabase, authUser.id),
+  ]);
 
   // If no user data exists yet (new user), create default data
   const user: User = userData || {

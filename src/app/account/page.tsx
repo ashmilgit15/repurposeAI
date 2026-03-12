@@ -2,10 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AccountClient } from "./account-client";
 import type { User } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-async function getUserData(userId: string): Promise<User | null> {
-  const supabase = await createClient();
-
+async function getUserData(supabase: SupabaseClient, userId: string): Promise<User | null> {
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -25,7 +24,7 @@ export default async function AccountPage() {
     redirect("/login");
   }
 
-  const userData = await getUserData(authUser.id);
+  const userData = await getUserData(supabase, authUser.id);
 
   const user: User = userData || {
     id: authUser.id,

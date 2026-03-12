@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedAdminUser } from "@/lib/security/admin";
 
 export async function GET() {
   try {
     const supabase = await createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const adminUser = await getAuthenticatedAdminUser(supabase);
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { data: userData, error } = await supabase
       .from("users")
       .select("email, subscription_tier, jobs_this_month")
-      .eq("id", user.id)
+      .eq("id", adminUser.id)
       .single();
 
     if (error || !userData) {

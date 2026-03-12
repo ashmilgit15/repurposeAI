@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +29,6 @@ import {
   ArrowLeft,
   Link as LinkIcon,
   Loader2,
-  AlertCircle,
   Sparkles,
   ChevronDown,
   ChevronUp,
@@ -71,12 +69,6 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
   const [isContentExpanded, setIsContentExpanded] = useState(false);
 
   const charCount = useMemo(() => inputText.length, [inputText]);
-  const isValidInput = useMemo(() => charCount >= 100, [charCount]);
-  const hasSelectedFormats = useMemo(() => selectedFormats.length > 0, [selectedFormats]);
-  const canSubmit = useMemo(
-    () => isValidInput && hasSelectedFormats && !loading && !scraping,
-    [isValidInput, hasSelectedFormats, loading, scraping]
-  );
 
   // Optimized input handler with startTransition for non-blocking updates
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -137,8 +129,6 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
   }, [urlInput]);
 
   const handleSubmit = useCallback(async () => {
-    console.log("Generate Content button clicked");
-
     // Validation checks with user feedback
     if (!inputText) {
       toast.error("Please enter some content to repurpose");
@@ -159,15 +149,13 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
 
     setLoading(true);
     setProgress(0);
-    const startTime = Date.now();
 
     // Simulate progress
     const progressInterval = setInterval(() => {
-      setProgress((prev) => Math.min(prev + Math.random() * 15, 90));
-    }, 500);
+      setProgress((prev) => Math.min(prev + Math.random() * 20, 92));
+    }, 350);
 
     try {
-      console.log("Sending request to /api/jobs/create...");
       const response = await fetch("/api/jobs/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -196,19 +184,9 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
       }
 
       const data = await response.json();
-      console.log("Job created successfully:", data);
-
       setProgress(100);
-
-      // Ensure loading state is visible for at least 800ms to prevent flashing
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, 800 - elapsedTime);
-
-      setTimeout(() => {
-        router.push(`/job/${data.job_id}`);
-      }, 500 + remainingTime);
+      router.push(`/job/${data.job_id}`);
     } catch (error) {
-      console.error("Submit error:", error);
       clearInterval(progressInterval);
       toast.error(error instanceof Error ? error.message : "Failed to create job");
       setLoading(false);
@@ -226,19 +204,19 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
       {/* Header */}
       <header className="glass-nav">
         <div className="premium-container">
-          <div className="flex items-center h-16 gap-6">
-            <Link href="/dashboard">
+          <div className="flex items-center h-16 gap-3 sm:gap-6">
+            <Link href="/dashboard" className="shrink-0">
               <Button variant="ghost" size="sm" className="hover:bg-white/5 group text-slate-400">
                 <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                 Back
               </Button>
             </Link>
-            <div className="h-6 w-px bg-white/10" />
-            <div className="flex items-center gap-3">
+            <div className="hidden h-6 w-px bg-white/10 sm:block" />
+            <div className="flex min-w-0 items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">Repurpose<span className="text-white">AI</span></span>
+              <span className="hidden font-bold text-xl tracking-tight sm:block">Repurpose<span className="text-white">AI</span></span>
             </div>
           </div>
         </div>
@@ -266,7 +244,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
             <CardContent className="p-8 space-y-8">
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 relative group">
+                  <div className="relative min-w-0 flex-1 group">
                     <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                       <LinkIcon className="w-5 h-5 text-muted-foreground/50 group-focus-within:text-purple-400 transition-colors" />
                     </div>
@@ -338,8 +316,8 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                     )}
                     {scrapedTitle && (
                       <div className="absolute bottom-2 right-2 animate-in fade-in slide-in-from-right-4">
-                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20 font-medium px-3 py-1.5 rounded-xl backdrop-blur-sm">
-                          ✓ {scrapedTitle.substring(0, 30)}...
+                        <Badge className="max-w-[min(70vw,16rem)] bg-green-500/10 text-green-400 border-green-500/20 font-medium px-3 py-1.5 rounded-xl backdrop-blur-sm">
+                          <span className="block truncate">✓ {scrapedTitle}</span>
                         </Badge>
                       </div>
                     )}
@@ -435,10 +413,10 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
           </Card>
 
           {/* Submit Section */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-8 glass-card border-indigo-500/20 rounded-[2.5rem] shadow-2xl shadow-indigo-900/10 border-beam">
-            <div className="flex flex-col gap-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 sm:p-8 glass-card border-indigo-500/20 rounded-[2.5rem] shadow-2xl shadow-indigo-900/10 border-beam">
+            <div className="flex min-w-0 flex-col gap-1">
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/50">Production Status</p>
-              <div className="text-sm font-bold text-white/80 flex items-center gap-2">
+              <div className="wrap-anywhere text-sm font-bold text-white/80 flex flex-wrap items-center gap-2">
                 {isProUser ? (
                   <>
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -452,7 +430,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
               <Link href="/dashboard" className="flex-1 sm:flex-none">
                 <Button variant="ghost" className="w-full h-14 rounded-2xl hover:bg-white/5 font-bold" disabled={loading}>
                   Archive Draft
@@ -494,7 +472,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
               </div>
               <h3 className="text-2xl font-black text-white mb-3 tracking-tight">AI is Crafting...</h3>
               <p className="text-muted-foreground font-medium mb-10 leading-relaxed px-2 text-sm italic">
-                We're optimizing your content for {selectedFormats.length} different platforms. Hang tight!
+                We&apos;re optimizing your content for {selectedFormats.length} different platforms. Hang tight!
               </p>
 
               <div className="space-y-3">
@@ -528,7 +506,7 @@ export function NewJobClient({ canCreateJob, isProUser, jobsRemaining }: NewJobC
             <DialogHeader className="mb-8">
               <DialogTitle className="text-3xl font-black tracking-tight text-center">Out of Credits!</DialogTitle>
               <DialogDescription className="text-lg text-muted-foreground font-medium text-center pt-2">
-                You've used all 3 free jobs this month. Unlock unlimited production with Pro.
+                You&apos;ve used all 3 free jobs this month. Unlock unlimited production with Pro.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">

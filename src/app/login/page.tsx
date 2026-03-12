@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { formatSupabaseAuthError, withSupabaseAuthRetry } from "@/lib/supabase/auth-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,11 +13,17 @@ import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const showConfirmationMessage = searchParams.get("confirmation") === "1";
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,20 +32,21 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error: signInError } = await withSupabaseAuthRetry(() =>
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+      );
 
       if (signInError) {
         setError(signInError.message);
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setError("An unexpected error occurred");
+      router.replace("/dashboard");
+    } catch (error) {
+      setError(formatSupabaseAuthError(error, "Couldn't sign you in right now."));
     } finally {
       setLoading(false);
     }
@@ -64,6 +72,12 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+            {showConfirmationMessage && (
+              <div className="bg-emerald-500/10 text-emerald-300 text-sm p-3 rounded-md">
+                Account created. Check your email for the confirmation link, then sign in.
+              </div>
+            )}
+
             {error && (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
                 {error}

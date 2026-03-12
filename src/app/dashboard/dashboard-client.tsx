@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Zap,
@@ -58,20 +57,19 @@ function getRelativeTime(dateString: string): string {
 export function DashboardClient({ user, recentJobs }: DashboardClientProps) {
   const router = useRouter();
 
+  useEffect(() => {
+    router.prefetch("/account");
+    router.prefetch("/new-job");
+  }, [router]);
+
   const handleLogout = useCallback(async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    router.replace("/");
   }, [router]);
 
   const usagePercentage = useMemo(
     () => (user.subscription_tier === "pro" ? 0 : (user.jobs_this_month / FREE_TIER_LIMIT) * 100),
-    [user.subscription_tier, user.jobs_this_month]
-  );
-
-  const canCreateJob = useMemo(
-    () => user.subscription_tier === "pro" || user.jobs_this_month < FREE_TIER_LIMIT,
     [user.subscription_tier, user.jobs_this_month]
   );
 
@@ -81,12 +79,12 @@ export function DashboardClient({ user, recentJobs }: DashboardClientProps) {
       {/* Header */}
       <header className="glass-nav">
         <div className="premium-container">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
+          <div className="flex justify-between items-center gap-3 h-16">
+            <Link href="/dashboard" className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80">
               <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">
+              <span className="hidden font-bold text-xl tracking-tight sm:block">
                 Repurpose<span className="text-white">AI</span>
               </span>
             </Link>
@@ -110,7 +108,7 @@ export function DashboardClient({ user, recentJobs }: DashboardClientProps) {
                 <DropdownMenuContent align="end" className="w-64 glass-card border-white/10 p-2">
                   <div className="px-4 py-3 border-b border-white/5 mb-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">Signed in as</p>
-                    <p className="text-sm font-medium truncate">{user.email}</p>
+                    <p className="wrap-anywhere text-sm font-medium">{user.email}</p>
                   </div>
                   <DropdownMenuItem asChild>
                     <Link href="/account" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 cursor-pointer">
@@ -174,22 +172,22 @@ export function DashboardClient({ user, recentJobs }: DashboardClientProps) {
               <div className="grid gap-3 animate-in fade-in slide-in-from-bottom-8">
                 {recentJobs.map((job) => (
                   <Link key={job.id} href={`/job/${job.id}`} className="group">
-                    <div className="glass-card border-white/5 hover:border-indigo-500/30 rounded-[1.5rem] p-4 flex items-center justify-between gap-6 transition-all hover:bg-white/[0.05]">
-                      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-indigo-500/10 transition-colors">
+                    <div className="glass-card border-white/5 hover:border-indigo-500/30 rounded-[1.5rem] p-4 flex items-center gap-4 sm:gap-6 transition-all hover:bg-white/[0.05]">
+                      <div className="hidden h-12 w-12 shrink-0 rounded-xl bg-white/5 border border-white/5 sm:flex items-center justify-center group-hover:bg-indigo-500/10 transition-colors">
                         <Calendar className="w-5 h-5 text-muted-foreground group-hover:text-indigo-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-base truncate mb-0.5 text-white/90">
                           {job.input_text.substring(0, 60)}...
                         </h3>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400/80 bg-indigo-500/5 px-2 py-0.5 rounded-full border border-indigo-500/10">
                             {job.selected_formats.length} Channels
                           </span>
                           <span className="text-[10px] text-muted-foreground/60 font-medium">{getRelativeTime(job.created_at)}</span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="ml-auto shrink-0 rounded-full hover:bg-white/10 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-5 h-5 text-indigo-400" />
                       </Button>
                     </div>

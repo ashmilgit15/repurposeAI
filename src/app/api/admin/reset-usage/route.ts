@@ -1,27 +1,36 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const ADMIN_SECRET = "repurpose2024";
+import { getAuthenticatedAdminUser } from "@/lib/security/admin";
+import { enforceTrustedOrigin } from "@/lib/security/request";
+import { enforceUserRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
-    const { secret } = await request.json();
-
-    if (secret !== ADMIN_SECRET) {
-      return NextResponse.json({ error: "Invalid admin secret" }, { status: 403 });
+    const originError = enforceTrustedOrigin(request);
+    if (originError) {
+      return originError;
     }
 
     const supabase = await createClient();
+    const adminUser = await getAuthenticatedAdminUser(supabase);
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const rateLimitError = await enforceUserRateLimit(supabase, {
+      bucket: "admin:reset-usage",
+      limit: 6,
+      windowSeconds: 300,
+      message: "Too many admin reset attempts. Please try again later.",
+    });
+    if (rateLimitError) {
+      return rateLimitError;
     }
 
     const { error } = await supabase
       .from("users")
       .update({ jobs_this_month: 0 })
-      .eq("id", user.id);
+      .eq("id", adminUser.id);
 
     if (error) {
       console.error("Error resetting usage:", error);

@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
 import { generatePrompt } from "@/lib/prompts";
-import { FREE_TIER_LIMIT, FREE_TIER_FORMATS } from "@/lib/types";
+import { FREE_TIER_LIMIT, FREE_TIER_FORMATS, PLATFORM_INFO, type Platform } from "@/lib/types";
+import { enforceTrustedOrigin } from "@/lib/security/request";
+import { enforceUserRateLimit } from "@/lib/security/rate-limit";
 
 // AI Provider types
 type AIProvider = "gemini" | "groq";
@@ -12,6 +14,16 @@ interface GenerationResult {
   content: string;
   provider: AIProvider;
 }
+
+const ALLOWED_BRAND_VOICES = new Set([
+  "professional",
+  "casual",
+  "friendly",
+  "authoritative",
+  "witty",
+]);
+const MAX_INPUT_TEXT_LENGTH = 50_000;
+const ALLOWED_FORMATS = new Set(Object.keys(PLATFORM_INFO) as Platform[]);
 
 // Generate content using Gemini (Primary)
 async function generateWithGemini(prompt: string): Promise<string> {
@@ -78,6 +90,11 @@ async function generateContentWithFallback(prompt: string): Promise<GenerationRe
 
 export async function POST(request: Request) {
   try {
+    const originError = enforceTrustedOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const supabase = await createClient();
 
     // Check authentication
@@ -86,8 +103,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const rateLimitError = await enforceUserRateLimit(supabase, {
+      bucket: "jobs:create",
+      limit: 12,
+      windowSeconds: 600,
+      message: "Too many content generation requests. Please wait a few minutes and try again.",
+    });
+    if (rateLimitError) {
+      return rateLimitError;
+    }
+
     // Get request body
-    const { input_text, selected_formats, brand_voice = "professional" } = await request.json();
+    const requestBody = await request.json().catch(() => null);
+    const input_text = typeof requestBody?.input_text === "string" ? requestBody.input_text.trim() : "";
+    const brand_voice =
+      typeof requestBody?.brand_voice === "string" ? requestBody.brand_voice : "professional";
+    const rawFormats = Array.isArray(requestBody?.selected_formats)
+      ? requestBody.selected_formats
+      : [];
+    const selected_formats = Array.from(new Set(rawFormats)).filter(
+      (format): format is Platform => typeof format === "string" && ALLOWED_FORMATS.has(format as Platform)
+    );
 
     // Validate input
     if (!input_text || input_text.length < 100) {
@@ -97,9 +133,30 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!selected_formats || selected_formats.length === 0) {
+    if (input_text.length > MAX_INPUT_TEXT_LENGTH) {
+      return NextResponse.json(
+        { error: `Content must be ${MAX_INPUT_TEXT_LENGTH.toLocaleString()} characters or fewer` },
+        { status: 400 }
+      );
+    }
+
+    if (!ALLOWED_BRAND_VOICES.has(brand_voice)) {
+      return NextResponse.json(
+        { error: "Invalid brand voice selection" },
+        { status: 400 }
+      );
+    }
+
+    if (selected_formats.length === 0) {
       return NextResponse.json(
         { error: "Please select at least one output format" },
+        { status: 400 }
+      );
+    }
+
+    if (selected_formats.length !== rawFormats.length) {
+      return NextResponse.json(
+        { error: "One or more selected formats are invalid" },
         { status: 400 }
       );
     }
@@ -170,29 +227,60 @@ export async function POST(request: Request) {
     }
 
     // Generate content for each format with fallback
-    const outputs: Record<string, string> = {};
-    let usedProvider: AIProvider = "gemini";
+    const generationResults = await Promise.all(
+      selected_formats.map(async (format: string) => {
+        try {
+          const prompt = generatePrompt(format, input_text, brand_voice);
+          const result = await generateContentWithFallback(prompt);
+          return {
+            format,
+            content: result.content,
+            provider: result.provider,
+          };
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`Error generating ${format}:`, errorMessage);
 
-    for (const format of selected_formats) {
-      try {
-        const prompt = generatePrompt(format, input_text, brand_voice);
-        const result = await generateContentWithFallback(prompt);
-        outputs[format] = result.content;
-        usedProvider = result.provider;
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`Error generating ${format}:`, errorMessage);
+          if (errorMessage.includes("API key") || errorMessage.includes("configured")) {
+            return {
+              format,
+              content: "AI service configuration error. Please contact support.",
+              provider: null,
+            };
+          }
 
-        // Provide user-friendly error messages
-        if (errorMessage.includes("API key") || errorMessage.includes("configured")) {
-          outputs[format] = `AI service configuration error. Please contact support.`;
-        } else if (errorMessage.includes("rate") || errorMessage.includes("limit")) {
-          outputs[format] = `Rate limit reached. Please try again in a moment.`;
-        } else if (errorMessage.includes("safety") || errorMessage.includes("blocked")) {
-          outputs[format] = `Content was flagged by safety filters. Try modifying your input.`;
-        } else {
-          outputs[format] = `Error generating content for ${format}. Please try again later.`;
+          if (errorMessage.includes("rate") || errorMessage.includes("limit")) {
+            return {
+              format,
+              content: "Rate limit reached. Please try again in a moment.",
+              provider: null,
+            };
+          }
+
+          if (errorMessage.includes("safety") || errorMessage.includes("blocked")) {
+            return {
+              format,
+              content: "Content was flagged by safety filters. Try modifying your input.",
+              provider: null,
+            };
+          }
+
+          return {
+            format,
+            content: `Error generating content for ${format}. Please try again later.`,
+            provider: null,
+          };
         }
+      })
+    );
+
+    const outputs: Record<string, string> = {};
+    const providersUsed = new Set<AIProvider>();
+
+    for (const result of generationResults) {
+      outputs[result.format] = result.content;
+      if (result.provider) {
+        providersUsed.add(result.provider);
       }
     }
 
@@ -227,7 +315,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       job_id: job.id,
       outputs,
-      provider: usedProvider, // Let client know which provider was used
+      provider: Array.from(providersUsed)[0] ?? null,
     });
   } catch (error) {
     console.error("Error creating job:", error);

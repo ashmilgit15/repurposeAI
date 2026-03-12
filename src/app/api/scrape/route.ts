@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceTrustedOrigin } from "@/lib/security/request";
+import { enforceUserRateLimit } from "@/lib/security/rate-limit";
+import { parsePublicHttpUrl } from "@/lib/security/url";
 
 export async function POST(request: Request) {
   try {
+    const originError = enforceTrustedOrigin(request);
+    if (originError) {
+      return originError;
+    }
+
     const supabase = await createClient();
 
     // Check authentication
@@ -11,17 +19,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { url } = await request.json();
-
-    if (!url) {
-      return NextResponse.json({ error: "URL is required" }, { status: 400 });
+    const rateLimitError = await enforceUserRateLimit(supabase, {
+      bucket: "scrape:create",
+      limit: 10,
+      windowSeconds: 600,
+      message: "Too many scrape requests. Please wait a few minutes and try again.",
+    });
+    if (rateLimitError) {
+      return rateLimitError;
     }
 
-    // Validate URL format
+    const requestBody = await request.json().catch(() => null);
+    let targetUrl: URL;
     try {
-      new URL(url);
-    } catch {
-      return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
+      targetUrl = parsePublicHttpUrl(requestBody?.url);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid URL format" },
+        { status: 400 }
+      );
     }
 
     const apiKey = process.env.FIRECRAWL_API_KEY;
@@ -39,8 +55,9 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       },
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
-        url: url,
+        url: targetUrl.toString(),
         formats: ["markdown"],
       }),
     });
@@ -77,7 +94,7 @@ export async function POST(request: Request) {
       success: true,
       content: content,
       title: data.data?.metadata?.title || "Untitled",
-      url: url,
+      url: targetUrl.toString(),
     });
   } catch (error) {
     console.error("Error scraping URL:", error);

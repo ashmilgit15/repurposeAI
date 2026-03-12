@@ -99,16 +99,32 @@
 }
 
 @layer base {
+  html {
+    max-width: 100%;
+    overflow-x: clip;
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
     @apply bg-background text-foreground;
+    max-width: 100%;
+    overflow-x: clip;
     /* Performance optimizations */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  img,
+  svg,
+  video,
+  canvas,
+  iframe {
+    max-width: 100%;
   }
 
   /* Hardware acceleration for interactions only when needed */
@@ -245,7 +261,7 @@ button:active {
 }
 
 .premium-container {
-  @apply max-w-[1400px] mx-auto px-6 sm:px-10 lg:px-16;
+  @apply max-w-[1400px] mx-auto px-4 sm:px-10 lg:px-16;
 }
 
 .mesh-gradient {
@@ -274,9 +290,9 @@ button:active {
   pointer-events: none;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Custom Scrollbar */

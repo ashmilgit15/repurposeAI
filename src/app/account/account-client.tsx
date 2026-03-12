@@ -59,8 +59,7 @@ export function AccountClient({ user }: AccountClientProps) {
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    router.replace("/");
   };
 
   const handleUpgrade = async () => {
@@ -76,7 +75,7 @@ export function AccountClient({ user }: AccountClientProps) {
 
       const { url } = await response.json();
       window.location.href = url;
-    } catch (error) {
+    } catch {
       toast.error("Failed to start checkout. Please try again.");
       setUpgrading(false);
     }
@@ -95,7 +94,7 @@ export function AccountClient({ user }: AccountClientProps) {
 
       const { url } = await response.json();
       window.location.href = url;
-    } catch (error) {
+    } catch {
       toast.error("Failed to open billing portal. Please try again.");
       setUpgrading(false);
     }
@@ -115,7 +114,7 @@ export function AccountClient({ user }: AccountClientProps) {
       toast.success("Subscription cancelled. You'll retain access until the end of your billing period.");
       setShowCancelDialog(false);
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to cancel subscription. Please try again.");
     } finally {
       setCancelling(false);
@@ -154,9 +153,9 @@ export function AccountClient({ user }: AccountClientProps) {
               <CardTitle>Account Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-muted-foreground">Email</span>
-                <span className="font-medium">{user.email}</span>
+                <span className="wrap-anywhere font-medium sm:text-right">{user.email}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">

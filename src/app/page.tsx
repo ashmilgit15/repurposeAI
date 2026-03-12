@@ -3,11 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Zap, Layers, Clock, Check, ArrowRight, Copy, CheckCircle } from "lucide-react";
+import { siteConfig } from "@/lib/seo";
 
 const SAMPLE_BLOG = `Why Most SaaS Businesses Fail in Their First Year
 
@@ -110,6 +111,31 @@ Tag a founder who needs to see this 👇
 #saas #startup #entrepreneur #founder #business #tech #marketing #productdevelopment #startuplife #entrepreneurship #businesstips #saasfounder #techstartup #growth`,
 };
 
+const STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteConfig.name,
+    url: siteConfig.url,
+    description: siteConfig.description,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: siteConfig.name,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: siteConfig.url,
+    description: siteConfig.description,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: "Free plan with 3 AI repurposing jobs each month.",
+    },
+  },
+];
+
 export default function Home() {
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedFormats, setSelectedFormats] = useState({
@@ -137,8 +163,8 @@ export default function Home() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass-nav">
         <div className="premium-container">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 sm:gap-4 h-20">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Zap className="w-6 h-6 text-white" />
               </div>
@@ -157,12 +183,12 @@ export default function Home() {
                 Pricing
               </a>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <Link href="/login">
-                <Button variant="ghost" className="text-sm font-medium hover:bg-white/5">Login</Button>
+                <Button variant="ghost" className="px-3 text-sm font-medium hover:bg-white/5 sm:px-4">Login</Button>
               </Link>
               <Link href="/signup">
-                <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-0 px-6 font-semibold shadow-lg shadow-indigo-600/20 rounded-xl">
+                <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-0 px-4 sm:px-6 font-semibold shadow-lg shadow-indigo-600/20 rounded-xl">
                   Get Started
                 </Button>
               </Link>
@@ -171,6 +197,12 @@ export default function Home() {
         </div>
       </nav>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
+
+      <main>
       <section className="pt-24 pb-10 relative lg:pt-32 lg:pb-16">
         <div className="premium-container">
           <div className="text-center max-w-4xl mx-auto mb-16">
@@ -182,9 +214,10 @@ export default function Home() {
               <br />
               <span className="gradient-text">10 Platform-Ready Posts</span>{" "}
             </h1>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              Stop spending hours manually reformatting content. Let AI transform your articles into
-              viral threads, LinkedIn power-posts, and engaging captions—instantly.
+            <p className="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
+              RepurposeAI is an AI content repurposing tool that transforms one blog post, article,
+              or newsletter into platform-ready social media posts for X, LinkedIn, Instagram, email,
+              and more.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup">
@@ -243,7 +276,7 @@ export default function Home() {
                         { label: "Instagram Caption", delay: "delay-300", icon: "📸" },
                         { label: "Email Newsletter", delay: "delay-400", icon: "📧" },
                         { label: "TikTok Script", delay: "delay-500", icon: "🎵" },
-                      ].map((format, i) => (
+                      ].map((format) => (
                         <div key={format.label}
                           className={`flex items-center justify-between gap-3 bg-white/5 hover:bg-white/10 transition-colors rounded-2xl p-4 border border-white/5 group`}
                         >
@@ -268,8 +301,12 @@ export default function Home() {
           <div className="text-center mb-24">
             <Badge variant="outline" className="mb-4 border-indigo-500/30 text-indigo-400 rounded-full">Capabilities</Badge>
             <h2 className="text-4xl sm:text-6xl font-black mb-6 tracking-tight">
-              One post, <span className="gradient-text">infinite possibilities.</span>
+              AI content repurposing for <span className="gradient-text">every major channel.</span>
             </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Create social posts, email copy, and campaign assets from a single source article instead
+              of rewriting every variation by hand.
+            </p>
           </div>
 
           <div className="bento-grid">
@@ -448,8 +485,8 @@ export default function Home() {
                       </div>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <div className="bg-black/20 rounded-2xl p-4 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-                        <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{SAMPLE_OUTPUTS[key as keyof typeof SAMPLE_OUTPUTS]}</p>
+                    <div className="bg-black/20 rounded-2xl p-4 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+                        <p className="wrap-anywhere text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{SAMPLE_OUTPUTS[key as keyof typeof SAMPLE_OUTPUTS]}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -553,6 +590,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="py-10 border-t border-white/5 relative bg-black/40">
@@ -564,7 +602,7 @@ export default function Home() {
               </div>
               <span className="font-bold text-2xl tracking-tight">Repurpose<span className="text-white">AI</span></span>
             </div>
-            <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
               <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
                 Pricing
               </a>

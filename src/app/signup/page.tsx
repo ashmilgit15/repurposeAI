@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { formatSupabaseAuthError, withSupabaseAuthRetry } from "@/lib/supabase/auth-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,11 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/login?confirmation=1");
+  }, [router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,23 +44,29 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient();
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      const { data, error: signUpError } = await withSupabaseAuthRetry(() =>
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
+          },
+        })
+      );
 
       if (signUpError) {
         setError(signUpError.message);
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setError("An unexpected error occurred");
+      if (!data.session) {
+        router.replace("/login?confirmation=1");
+        return;
+      }
+
+      router.replace("/dashboard");
+    } catch (error) {
+      setError(formatSupabaseAuthError(error, "Couldn't create your account right now."));
     } finally {
       setLoading(false);
     }

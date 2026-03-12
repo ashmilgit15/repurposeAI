@@ -1,7 +1,3 @@
-
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const Groq = require("groq-sdk");
-
 async function testGroq() {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
@@ -12,7 +8,8 @@ async function testGroq() {
     console.log("Testing Groq API with llama-3.3-70b-versatile...\n");
 
     try {
-        const groq = new Groq.default({ apiKey });
+        const { default: Groq } = await import("groq-sdk");
+        const groq = new Groq({ apiKey });
         const completion = await groq.chat.completions.create({
             messages: [{ role: "user", content: "Say 'Hello, Groq is working!' in one sentence." }],
             model: "llama-3.3-70b-versatile",

@@ -84,19 +84,19 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
       {/* Header */}
       <header className="glass-nav">
         <div className="premium-container">
-          <div className="flex items-center h-16 gap-6">
-            <Link href="/dashboard">
+          <div className="flex items-center h-16 gap-3 sm:gap-6">
+            <Link href="/dashboard" className="shrink-0">
               <Button variant="ghost" size="sm" className="hover:bg-white/5 group">
                 <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                 Dashboard
               </Button>
             </Link>
-            <div className="h-6 w-px bg-white/10" />
-            <div className="flex items-center gap-3">
+            <div className="hidden h-6 w-px bg-white/10 sm:block" />
+            <div className="flex min-w-0 items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">Repurpose<span className="text-white">AI</span></span>
+              <span className="hidden font-bold text-xl tracking-tight sm:block">Repurpose<span className="text-white">AI</span></span>
             </div>
           </div>
         </div>
@@ -130,12 +130,12 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
           </CardHeader>
           <CardContent className="p-8">
             <div className="bg-black/20 rounded-2xl p-6 border border-white/5">
-              <p className="text-sm text-muted-foreground/80 leading-relaxed italic">
-                "{job.input_text.substring(0, 400)}
-                {job.input_text.length > 400 ? "..." : ""}"
+              <p className="wrap-anywhere text-sm text-muted-foreground/80 leading-relaxed italic">
+                &ldquo;{job.input_text.substring(0, 400)}
+                {job.input_text.length > 400 ? "..." : ""}&rdquo;
               </p>
             </div>
-            <div className="mt-6 flex items-center gap-6 text-[10px] font-black uppercase tracking-widest px-1">
+            <div className="mt-6 flex flex-wrap items-center gap-3 sm:gap-6 text-[10px] font-black uppercase tracking-widest px-1">
               <div className="flex items-center gap-2 text-indigo-400">
                 <Zap className="w-3 h-3" />
                 <span>Context: {job.brand_voice}</span>
@@ -158,16 +158,16 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
 
             return (
               <Card key={format} className="glass-card rounded-[2.5rem] overflow-hidden group transition-all duration-500 border-white/5 hover:border-indigo-500/30">
-                <CardHeader className="bg-white/5 border-b border-white/5 px-8 h-20 flex flex-row items-center justify-between">
-                  <div className="flex items-center gap-4">
+                <CardHeader className="bg-white/5 border-b border-white/5 px-6 py-5 sm:px-8 sm:h-20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-4">
                     <span className="text-3xl group-hover:scale-110 transition-transform">{info.icon}</span>
-                    <CardTitle className="text-lg font-bold tracking-tight">{info.label}</CardTitle>
+                    <CardTitle className="min-w-0 text-lg font-bold tracking-tight">{info.label}</CardTitle>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCopy(content, format)}
-                    className="rounded-xl h-10 px-4 hover:bg-white/5 text-indigo-300 font-bold"
+                    className="w-full sm:w-auto rounded-xl h-10 px-4 hover:bg-white/5 text-indigo-300 font-bold"
                   >
                     {copiedFormat === format ? (
                       <>
@@ -184,7 +184,7 @@ export function JobResultsClient({ job }: JobResultsClientProps) {
                 </CardHeader>
                 <CardContent className="p-8">
                   <div className="bg-black/30 rounded-2xl p-6 border border-white/5 min-h-[120px] max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 group-hover:border-indigo-500/10 transition-colors">
-                    <p className="text-sm leading-relaxed text-muted-foreground/90 whitespace-pre-wrap">{content}</p>
+                    <p className="wrap-anywhere text-sm leading-relaxed text-muted-foreground/90 whitespace-pre-wrap">{content}</p>
                   </div>
                 </CardContent>
               </Card>

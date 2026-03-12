@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import Script from "next/script";
+import { absoluteUrl, defaultRobots, siteConfig } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,9 +16,64 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RepurposeAI - Turn One Blog Post Into 10 Platform-Ready Posts",
-  description: "Stop spending hours repurposing content. Let AI transform your blog posts into Twitter threads, LinkedIn posts, Instagram captions, and more in 60 seconds.",
-  keywords: ["content repurposing", "AI content", "social media automation", "content marketing"],
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: `${siteConfig.name} | ${siteConfig.title}`,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  keywords: [...siteConfig.keywords],
+  authors: [{ name: siteConfig.name }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  category: "marketing",
+  manifest: "/manifest.webmanifest",
+  referrer: "origin-when-cross-origin",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [
+      {
+        url: absoluteUrl(siteConfig.socialImagePath),
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} social preview`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [absoluteUrl(siteConfig.socialImagePath)],
+  },
+  robots: defaultRobots,
+  icons: {
+    icon: [
+      { url: "/icon?size=32", sizes: "32x32", type: "image/png" },
+      { url: "/icon?size=192", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/icon?size=32"],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4f46e5",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({

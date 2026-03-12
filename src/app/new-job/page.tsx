@@ -2,10 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewJobClient } from "./new-job-client";
 import { FREE_TIER_LIMIT } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-async function getUserData(userId: string) {
-  const supabase = await createClient();
-
+async function getUserData(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -47,7 +46,7 @@ export default async function NewJobPage() {
     redirect("/login");
   }
 
-  const userData = await getUserData(authUser.id);
+  const userData = await getUserData(supabase, authUser.id);
 
   const isProUser = userData?.subscription_tier === "pro";
   const jobsThisMonth = userData?.jobs_this_month || 0;
