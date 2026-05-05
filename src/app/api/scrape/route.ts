@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { enforceTrustedOrigin } from "@/lib/security/request";
 import { enforceUserRateLimit } from "@/lib/security/rate-limit";
 import { parsePublicHttpUrl } from "@/lib/security/url";
+import { scrapeUrl } from "@/lib/scraper";
 
 export async function POST(request: Request) {
   try {
@@ -40,67 +41,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const apiKey = process.env.FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Firecrawl API not configured" },
-        { status: 500 }
-      );
-    }
-
-    // Call Firecrawl API to scrape the URL
-    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({
-        url: targetUrl.toString(),
-        formats: ["markdown"],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Firecrawl API error:", errorData);
-      return NextResponse.json(
-        { error: errorData.error || "Failed to scrape URL" },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-
-    if (!data.success) {
-      return NextResponse.json(
-        { error: data.error || "Failed to scrape URL" },
-        { status: 400 }
-      );
-    }
-
-    // Extract the markdown content
-    const content = data.data?.markdown || data.data?.content || "";
-
-    if (!content || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: "No content found at this URL" },
-        { status: 400 }
-      );
-    }
+    // Scrape with Firecrawl → fallback strategy
+    const result = await scrapeUrl(targetUrl.toString());
 
     return NextResponse.json({
       success: true,
-      content: content,
-      title: data.data?.metadata?.title || "Untitled",
+      content: result.content,
+      title: result.title || "Untitled",
       url: targetUrl.toString(),
     });
   } catch (error) {
     console.error("Error scraping URL:", error);
-    return NextResponse.json(
-      { error: "Failed to scrape URL" },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error ? error.message : "Failed to scrape URL";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -8,7 +8,7 @@ import { enforceTrustedOrigin } from "@/lib/security/request";
 import { enforceUserRateLimit } from "@/lib/security/rate-limit";
 
 // AI Provider types
-type AIProvider = "gemini" | "groq";
+type AIProvider = "gemini" | "groq" | "openrouter";
 
 interface GenerationResult {
   content: string;
@@ -33,7 +33,7 @@ async function generateWithGemini(prompt: string): Promise<string> {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const result = await model.generateContent(prompt);
   const response = await result.response;
   return response.text();
@@ -62,11 +62,55 @@ async function generateWithGroq(prompt: string): Promise<string> {
   return completion.choices[0]?.message?.content || "";
 }
 
+// Generate content using OpenRouter
+async function generateWithOpenRouter(prompt: string): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OpenRouter API key not configured");
+  }
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      "X-Title": "RepurposeAI",
+    },
+    body: JSON.stringify({
+      model: "google/gemma-4-31b-it:free",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 4096,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorBody}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 // Generate content with fallback system
 async function generateContentWithFallback(prompt: string): Promise<GenerationResult> {
-  // Try Gemini first (Primary)
+  // Try OpenRouter first (Primary)
   try {
-    console.log("Attempting generation with Gemini (primary)...");
+    console.log("Attempting generation with OpenRouter (primary)...");
+    const content = await generateWithOpenRouter(prompt);
+    console.log("OpenRouter generation successful");
+    return { content, provider: "openrouter" };
+  } catch (orError: unknown) {
+    const orMessage = orError instanceof Error ? orError.message : String(orError);
+    console.log(`OpenRouter failed: ${orMessage.substring(0, 100)}...`);
+    console.log("Falling back to Gemini...");
+  }
+
+  // Fallback to Gemini
+  try {
+    console.log("Attempting generation with Gemini...");
     const content = await generateWithGemini(prompt);
     console.log("Gemini generation successful");
     return { content, provider: "gemini" };
@@ -219,7 +263,7 @@ export async function POST(request: Request) {
     }
 
     // Check if at least one AI provider is configured
-    if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) {
+    if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) {
       return NextResponse.json(
         { error: "No AI service configured" },
         { status: 500 }
